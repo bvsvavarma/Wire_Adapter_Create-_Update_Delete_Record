@@ -1,8 +1,9 @@
 import { LightningElement, wire, api } from 'lwc';
 import getParentAccounts from '@salesforce/apex/AccountHelper.getParentAccounts'
 import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
-import { createRecord, getFieldValue, getRecord } from 'lightning/uiRecordApi';
-import ACCOUNT_OBJECT from '@salesforce/schema/Account'
+import { createRecord, updateRecord, deleteRecord, getFieldValue, getRecord } from 'lightning/uiRecordApi';
+import ACCOUNT_OBJECT from '@salesforce/schema/Account';
+import ACCOUNT_ID from '@salesforce/schema/Account.id';
 import PARENT_ACCOUNT_FIELD from '@salesforce/schema/Account.ParentId';
 import ACCOUNT_NAME_FIELD from '@salesforce/schema/Account.Name';
 import SLA_EXPIRATION_DATE_FIELD from '@salesforce/schema/Account.SLAExpirationDate__c';
@@ -10,6 +11,7 @@ import SLA_TYPE_FIELD from '@salesforce/schema/Account.SLA__c';
 import NO_OF_LOCATIONS_FIELD from '@salesforce/schema/Account.NumberofLocations__c';
 import DESCRIPTION_FIELD from '@salesforce/schema/Account.Description';
 import { NavigationMixin } from 'lightning/navigation';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 const fieldsToLoad = [
                         PARENT_ACCOUNT_FIELD, 
@@ -48,7 +50,7 @@ export default class AccountDetails extends NavigationMixin(LightningElement) {
             console.log('error');
         }
     }
-    
+
     @wire(getParentAccounts) wired_getParentAccount({data, error}){
         this.parentOptions = [];
         if(data){
@@ -125,24 +127,39 @@ export default class AccountDetails extends NavigationMixin(LightningElement) {
                 apiName: ACCOUNT_OBJECT.objectApiName,
                 fields : inputFields
             }
-            
-            createRecord(recordInput)
-            .then((result) => {
-                console.log("Account Created Successfully", result);
-                let pageReference = {
-                    type: 'standard__recordPage',
-                    attributes: {
-                        recordId: result.id,
-                        objectApiName: ACCOUNT_OBJECT.objectApiName,
-                        actionName: 'view'
-                    }
+            if(this.recordId){
+                //update operation
+                inputFields[ACCOUNT_ID.fieldApiName] = this.recordId;
+                let recordInput = {
+                    fields: inputFields
                 };
-                this[NavigationMixin.Navigate](pageReference);
-            })
-            .catch((error) => {
-                console.log("Error in creation", error);
-            });
 
+                updateRecord(recordInput)
+                .then((result) =>{
+                        console.log("Record Updated Successfully", result);
+                        this.showToast();
+                })
+                .catch((error) => {
+                    console.log('Error while updating record', error);
+                })
+            } else {
+                createRecord(recordInput)
+                .then((result) => {
+                    console.log("Account Created Successfully", result);
+                    let pageReference = {
+                        type: 'standard__recordPage',
+                        attributes: {
+                            recordId: result.id,
+                            objectApiName: ACCOUNT_OBJECT.objectApiName,
+                            actionName: 'view'
+                        }
+                    };
+                    this[NavigationMixin.Navigate](pageReference);
+                })
+                .catch((error) => {
+                    console.log("Error in creation", error);
+                });
+            }
         } else{
             console.log("Inputs are not valid");
         }
@@ -154,5 +171,51 @@ export default class AccountDetails extends NavigationMixin(LightningElement) {
         let isValid = fields.every((currItem) => 
             currItem.checkValidity());
         return isValid;
+    }
+
+    get formTitle(){
+        if(this.recordId){
+            return 'Edit Account';
+        }else {
+            return 'Create Account';
+        }
+    }
+
+    showToast() {
+        const event = new ShowToastEvent({
+            title: 'Success',
+            message:
+                'Record Updated Successfully.',
+            variant: 'success'
+        });
+        this.dispatchEvent(event);
+    }
+
+    get isDeleteAvailable(){
+        if(this.recordId){
+            return true;
+        } else {
+            return false;
+        }
+    }
+    deleteRecord(){
+        deleteRecord(this.recordId)
+        .then(() =>{
+            console.log("Record Deleted Successfully");
+            let pageRef = {
+                type: 'standard__objectPage',
+                attributes: {
+                    objectApiName: ACCOUNT_OBJECT.objectApiName,
+                    actionName: 'list'
+                },
+                state: {
+                    filterName: 'MyAccounts'
+              }
+            };
+            this[NavigationMixin.Navigate](pageRef);
+
+        }).catch((error) => {
+            console.log("Record Deletetion Failed",error);
+        });
     }
 }
