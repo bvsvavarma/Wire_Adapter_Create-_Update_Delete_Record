@@ -202,20 +202,22 @@ export default class AccountDetails extends NavigationMixin(LightningElement) {
         deleteRecord(this.recordId)
         .then(() =>{
             console.log("Record Deleted Successfully");
-            let pageRef = {
-                type: 'standard__objectPage',
-                attributes: {
-                    objectApiName: ACCOUNT_OBJECT.objectApiName,
-                    actionName: 'list'
-                },
-                state: {
-                    filterName: 'MyAccounts'
-              }
-            };
-            this[NavigationMixin.Navigate](pageRef);
-
+            this.navigateToRecentAccounts();
         }).catch((error) => {
-            console.log("Record Deletetion Failed",error);
+            console.log("Record Delete Failed",error);
+        });
+    }
+
+    navigateToRecentAccounts() {
+        this[NavigationMixin.Navigate]({
+            type: 'standard__objectPage',
+            attributes: {
+                objectApiName: 'Account',
+                actionName: 'list'
+            },
+            state: {
+                filterName: 'Recent'
+            }
         });
     }
 }
