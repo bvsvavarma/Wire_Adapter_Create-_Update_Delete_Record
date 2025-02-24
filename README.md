@@ -1,0 +1,1 @@
+# Wire_Adapter_Create-_Update_Delete_Record
