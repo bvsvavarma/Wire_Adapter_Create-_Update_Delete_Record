@@ -1,7 +1,7 @@
-import { LightningElement, wire } from 'lwc';
+import { LightningElement, wire, api } from 'lwc';
 import getParentAccounts from '@salesforce/apex/AccountHelper.getParentAccounts'
 import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
-import { createRecord } from 'lightning/uiRecordApi';
+import { createRecord, getFieldValue, getRecord } from 'lightning/uiRecordApi';
 import ACCOUNT_OBJECT from '@salesforce/schema/Account'
 import PARENT_ACCOUNT_FIELD from '@salesforce/schema/Account.ParentId';
 import ACCOUNT_NAME_FIELD from '@salesforce/schema/Account.Name';
@@ -11,6 +11,14 @@ import NO_OF_LOCATIONS_FIELD from '@salesforce/schema/Account.NumberofLocations_
 import DESCRIPTION_FIELD from '@salesforce/schema/Account.Description';
 import { NavigationMixin } from 'lightning/navigation';
 
+const fieldsToLoad = [
+                        PARENT_ACCOUNT_FIELD, 
+                        ACCOUNT_NAME_FIELD,
+                        SLA_EXPIRATION_DATE_FIELD,
+                        SLA_TYPE_FIELD,
+                        NO_OF_LOCATIONS_FIELD,
+                        DESCRIPTION_FIELD
+                    ];
 export default class AccountDetails extends NavigationMixin(LightningElement) {
     parentOptions = [];
     accountRecordTypeId;
@@ -23,6 +31,24 @@ export default class AccountDetails extends NavigationMixin(LightningElement) {
     selectedNoOfLocations="1";
     selectedDescription="";
 
+    @api recordId; // to get the record
+
+    @wire(getRecord, {
+        recordId: "$recordId",
+        fields : fieldsToLoad
+    }) wired_getRecordsData({data, error}){
+        if(data){
+            this.selectedParentAccount = getFieldValue(data, PARENT_ACCOUNT_FIELD);
+            this.selectedAccountName = getFieldValue(data, ACCOUNT_NAME_FIELD);
+            this.selectedSlaExpirationDate = getFieldValue(data, SLA_EXPIRATION_DATE_FIELD);
+            this.selectedSlaType = getFieldValue(data, SLA_TYPE_FIELD);
+            this.selectedNoOfLocations = getFieldValue(data, NO_OF_LOCATIONS_FIELD);
+            this.selectedDescription = getFieldValue(data, DESCRIPTION_FIELD);
+        } else if(error){
+            console.log('error');
+        }
+    }
+    
     @wire(getParentAccounts) wired_getParentAccount({data, error}){
         this.parentOptions = [];
         if(data){
